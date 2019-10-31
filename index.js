@@ -6,14 +6,14 @@ function getRandFname() {
     return `runResults-${fiveDigitID}`;
 }
 
-async function full_profile_report_times(region, fname) {
+async function fullProfileReportTimes(region, appName, fname) {
 
     const scraper = new log_scraper.LogScraper(region);
 
     const fullRepPattern = 'WT_PROF FULL REPORT';
     const fullRepRE = /@@@@WT_PROF: FULL REPORT ---(.*)---/;
 
-    const logGroup = '/aws/lambda/wt-full-flow-test-watchtower-monitor';
+    const logGroup = `/aws/lambda/${appName}-watchtower-monitor`;
     const logItems = await scraper.getAllLogItemsForGroupMatching(logGroup, fullRepPattern);
 
     const reports = logItems.filter(item => item.message.match(fullRepRE)).map(item => JSON.parse(item.message.match(fullRepRE)[1]));
@@ -56,6 +56,8 @@ async function full_profile_report_times(region, fname) {
 
     }
 
+    let outputfname;
+
     if (fname) {
         outputfname = fname;
     } else {
@@ -65,15 +67,63 @@ async function full_profile_report_times(region, fname) {
     fs.writeFileSync(outputfname, JSON.stringify(fullReports));
 }
 
-async function notification_delay_times(region, fname) {
+async function notificationDelayTimes(region, appName, fname) {
     const scraper = new log_scraper.LogScraper(region);
 
     const notificationDelayRE = /@@@@WT_PROF: VIOLATION REPORT DELAY: ([0-9]*)\(ms\)/;
     const delayPattern = 'WT_PROF VIOLATION REPORT DELAY';
-    const logGroup = '/aws/lambda/wt-full-flow-test-watchtower-monitor';
+    const logGroup = `/aws/lambda/${appName}-watchtower-monitor`;
     const logItems = await scraper.getAllLogItemsForGroupMatching(logGroup, delayPattern);
 
     const times = logItems.filter(item => item.message.match(notificationDelayRE)).map(item => Number(item.message.match(notificationDelayRE)[1]));
+
+
+    let outputfname;
+
+    if (fname) {
+        outputfname = fname;
+    } else {
+	getRandFname();
+    }
+
+    fs.writeFileSync(outputfname, JSON.stringify(times));
+}
+
+async function ingestionRunTimes(region, appName, fname) {
+    const logGroup = `/aws/lambda/${appName}-watchtower-ingestion`;
+
+    await functionRunTimes(region, logGroup, fname);
+}
+
+async function checkerRunTimes(region, appName, fname) {
+    const logGroup = `/aws/lambda/${appName}-watchtower-monitor`;
+
+    await functionRunTimes(region, logGroup, fname);
+}
+
+async function functionRunTimes(region, logGroup, fname) {
+
+    const scraper = new log_scraper.LogScraper(region);
+
+    const runReportRE = /REPORT RequestId: [0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\tDuration: ([0-9]*\.[0-9]*) ms/;
+    const initReportRE = /Init Duration: ([0-9]*\.[0-9]*) ms/;
+    const runReportPattern = "REPORT RequestId"
+
+    const logItems = await scraper.getAllLogItemsForGroupMatching(logGroup, runReportPattern);
+
+    const runTimes = logItems.map(item => item.message)
+	.filter(message => message.match(runReportRE)) // sanity
+	.map(message => {
+	    const res = {};
+	    res.runTime = Number(message.match(runReportRE)[1]);
+	    if (message.match(initReportRE)) {
+		res.isInit = true;
+		res.initTime = message.match(initReportRE)[1];
+            } else {
+		res.isInit = false;
+	    }
+	    return res;
+	})
 
     let outputfname = getRandFname();
 
@@ -81,8 +131,13 @@ async function notification_delay_times(region, fname) {
         outputfname = process.argv[2];
     }
 
-    fs.writeFileSync(outputfname, JSON.stringify(times));
+    fs.writeFileSync(outputfname, JSON.stringify(runTimes));
+
+
 }
 
-module.exports.full_profile_report_times = full_profile_report_times;
-module.exports.notification_delay_times = notification_delay_times;
+module.exports.fullProfileReportTimes = fullProfileReportTimes;
+module.exports.notificationDelayTimes = notificationDelayTimes;
+module.exports.ingestionRunTimes = ingestionRunTimes
+module.exports.checkerRunTimes = checkerRunTimes
+module.exports.functionRunTimes = functionRunTimes

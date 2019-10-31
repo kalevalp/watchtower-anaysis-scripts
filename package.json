@@ -1,0 +1,22 @@
+{
+  "name": "watchtower-anaysis-scripts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kalevalp/watchtower-anaysis-scripts.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kalevalp/watchtower-anaysis-scripts/issues"
+  },
+  "homepage": "https://github.com/kalevalp/watchtower-anaysis-scripts#readme",
+  "dependencies": {
+    "cloudwatch-log-scraper": "^1.2.2"
+  }
+}

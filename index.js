@@ -125,10 +125,13 @@ async function functionRunTimes(region, logGroup, fname) {
 	    return res;
 	})
 
-    let outputfname = getRandFname();
-
-    if (process.argv[2]) {
+    let outputfname;
+    if (fname) {
+	outputfname = fname;
+    } else if (process.argv[2]) {
         outputfname = process.argv[2];
+    } else {
+	outputfname = getRandFname();
     }
 
     fs.writeFileSync(outputfname, JSON.stringify(runTimes));

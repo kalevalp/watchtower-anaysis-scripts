@@ -101,7 +101,7 @@ async function getAllViolationReports(region, appName, fname) {
     // const holdsRE = /Property (.*) holds for property instance (.*)}/
     // const inconclusiveRE = /Property (.*) was not violated (but might be violated by future events) for property instance (.*)/        
 
-    let logItems = await scraper.getAllLogItemsForGroupMatching(logGroup, runReportPattern);
+    let logItems = await scraper.getAllLogItemsForGroupMatching(logGroup, propRepPattern);
     
     logItems = logItems.map(item => item.message);
 

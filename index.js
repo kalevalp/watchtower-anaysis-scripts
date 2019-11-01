@@ -89,6 +89,37 @@ async function notificationDelayTimes(region, appName, fname) {
     fs.writeFileSync(outputfname, JSON.stringify(times));
 }
 
+async function getAllViolationReports(region, appName, fname) {
+    const logGroup = `/aws/lambda/${appName}-watchtower-monitor`;
+
+    const propRepPattern = "for property instance"
+    // const potentialViolationRE = /Property (.*) was$ POTENTIALLY violated for property instance (.*)\. Failure triggered by event produced by Lambda invocation (.*)\./
+    // const violationRE = /Property (.*) was violated for property instance (.*)\. Failure triggered by event produced by Lambda invocation (.*)\./
+    // const holdsRE = /Property (.*) holds for property instance (.*)}/
+    // const inconclusiveRE = /Property (.*) was not violated (but might be violated by future events) for property instance (.*)/        
+
+    let logItems = await scraper.getAllLogItemsForGroupMatching(logGroup, runReportPattern);
+    
+    logItems = logItems.map(item => item.message);
+
+
+    writeDataToFile(logItems, fname);    
+}
+
+function writeDataToFile(data, fname) {
+
+    let outputfname;
+    if (fname) {
+	outputfname = fname;
+    } else if (process.argv[2]) {
+        outputfname = process.argv[2];
+    } else {
+	outputfname = getRandFname();
+    }
+
+    fs.writeFileSync(outputfname, JSON.stringify(data));
+}
+
 async function ingestionRunTimes(region, appName, fname) {
     const logGroup = `/aws/lambda/${appName}-watchtower-ingestion`;
 
@@ -125,18 +156,7 @@ async function functionRunTimes(region, logGroup, fname) {
 	    return res;
 	})
 
-    let outputfname;
-    if (fname) {
-	outputfname = fname;
-    } else if (process.argv[2]) {
-        outputfname = process.argv[2];
-    } else {
-	outputfname = getRandFname();
-    }
-
-    fs.writeFileSync(outputfname, JSON.stringify(runTimes));
-
-
+    writeDataToFile(runTimes, fname);
 }
 
 module.exports.fullProfileReportTimes = fullProfileReportTimes;
@@ -144,3 +164,4 @@ module.exports.notificationDelayTimes = notificationDelayTimes;
 module.exports.ingestionRunTimes = ingestionRunTimes
 module.exports.checkerRunTimes = checkerRunTimes
 module.exports.functionRunTimes = functionRunTimes
+module.exports.getAllViolationReports = getAllViolationReports;

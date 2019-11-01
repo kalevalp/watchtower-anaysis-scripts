@@ -90,6 +90,9 @@ async function notificationDelayTimes(region, appName, fname) {
 }
 
 async function getAllViolationReports(region, appName, fname) {
+
+    const scraper = new log_scraper.LogScraper(region);
+
     const logGroup = `/aws/lambda/${appName}-watchtower-monitor`;
 
     const propRepPattern = "for property instance"

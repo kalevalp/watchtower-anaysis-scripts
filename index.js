@@ -1,6 +1,8 @@
 const log_scraper = require('cloudwatch-log-scraper');
 const fs = require('fs');
 
+const aws = require('aws-sdk');
+
 function getRandFname() {
     const fiveDigitID = Math.floor(Math.random() * Math.floor(99999));
     return `runResults-${fiveDigitID}`;
@@ -99,10 +101,10 @@ async function getAllViolationReports(region, appName, fname) {
     // const potentialViolationRE = /Property (.*) was$ POTENTIALLY violated for property instance (.*)\. Failure triggered by event produced by Lambda invocation (.*)\./
     // const violationRE = /Property (.*) was violated for property instance (.*)\. Failure triggered by event produced by Lambda invocation (.*)\./
     // const holdsRE = /Property (.*) holds for property instance (.*)}/
-    // const inconclusiveRE = /Property (.*) was not violated (but might be violated by future events) for property instance (.*)/        
+    // const inconclusiveRE = /Property (.*) was not violated (but might be violated by future events) for property instance (.*)/
 
     let logItems = await scraper.getAllLogItemsForGroupMatching(logGroup, propRepPattern);
-    
+
     logItems = logItems.map(item => item.message);
 
 
@@ -162,9 +164,43 @@ async function functionRunTimes(region, logGroup, fname) {
     writeDataToFile(runTimes, fname);
 }
 
+async function getTTLdTableItems(region, tableName, ttlField) {
+    aws.config.update({region: region});
+
+    const ddb = new aws.DynamoDB();
+
+    var params = {
+	TableName: tableName
+    };
+
+    let lastEvaluatedKey = true;
+    let content = [];
+
+    while (lastEvaluatedKey) {
+	console.log("scanning..");
+	const response = await ddb.scan(params).promise();
+
+	lastEvaluatedKey = response.LastEvaluatedKey;
+	params.LastEvaluatedKey = lastEvaluatedKey;
+	content.push(...response.Items);
+    }
+
+    const deletedContent = content.filter(item => item[ttlField]);
+    return {allItems: content, deletedItems: deletedContent};
+}
+
 module.exports.fullProfileReportTimes = fullProfileReportTimes;
 module.exports.notificationDelayTimes = notificationDelayTimes;
 module.exports.ingestionRunTimes = ingestionRunTimes
 module.exports.checkerRunTimes = checkerRunTimes
 module.exports.functionRunTimes = functionRunTimes
 module.exports.getAllViolationReports = getAllViolationReports;
+module.exports.getTTLdTableItems = getTTLdTableItems;
+
+if (require.main === module) {
+    console.log("Running test from main");
+    getTTLdTableItems('eu-west-1','Watchtower-dev-MonitoredEvents', 'expiration')
+	.then(res => console.log("Total items: ", res.allItems.length, "\n",
+				 "Deleted items: ", res.deletedItems.length));
+}
+

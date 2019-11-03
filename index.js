@@ -164,12 +164,18 @@ async function functionRunTimes(region, logGroup, fname) {
     writeDataToFile(runTimes, fname);
 }
 
-async function getTTLdTableItems(region, tableName, ttlField) {
+async function getTTLdTableItems(region, tableName) {
     aws.config.update({region: region});
 
     const ddb = new aws.DynamoDB();
 
-    var params = {
+    let params = {
+	TableName: tableName,
+    };
+
+    const ttlInfo = await ddb.describeTimeToLive(params).promise();
+
+    params = {
 	TableName: tableName
     };
 
@@ -185,8 +191,15 @@ async function getTTLdTableItems(region, tableName, ttlField) {
 	content.push(...response.Items);
     }
 
-    const deletedContent = content.filter(item => item[ttlField]);
-    return {allItems: content, deletedItems: deletedContent};
+    const res = {allItems: content};
+
+    if (ttlInfo.TimeToLiveDescription &&
+	ttlInfo.TimeToLiveDescription.TimeToLiveStatus &&
+	ttlInfo.TimeToLiveDescription.TimeToLiveStatus === "ENABLED") {
+	const ttlField = ttlInfo.TimeToLiveDescription.AttributeName;
+	res.deletedItems = content.filter(item => item[ttlField]);
+    }
+    return res;
 }
 
 module.exports.fullProfileReportTimes = fullProfileReportTimes;
@@ -199,7 +212,7 @@ module.exports.getTTLdTableItems = getTTLdTableItems;
 
 if (require.main === module) {
     console.log("Running test from main");
-    getTTLdTableItems('eu-west-1','Watchtower-dev-MonitoredEvents', 'expiration')
+    getTTLdTableItems('eu-west-1','Watchtower-dev-MonitoredEvents')
 	.then(res => console.log("Total items: ", res.allItems.length, "\n",
 				 "Deleted items: ", res.deletedItems.length));
 }

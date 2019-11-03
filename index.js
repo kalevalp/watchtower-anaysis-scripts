@@ -187,7 +187,7 @@ async function getTTLdTableItems(region, tableName) {
 	const response = await ddb.scan(params).promise();
 
 	lastEvaluatedKey = response.LastEvaluatedKey;
-	params.LastEvaluatedKey = lastEvaluatedKey;
+	params.ExclusiveStartKey = lastEvaluatedKey;
 	content.push(...response.Items);
     }
 

@@ -202,6 +202,15 @@ async function getTTLdTableItems(region, tableName) {
     return res;
 }
 
+async function getCollisionReport(region, logGroup, fname) {
+    const scraper = new log_scraper.LogScraper(region)
+    const collisionPattern = "Found interleavings block"
+    const logItems = await scraper.getAllLogItemsForGroupMatching(logGroup, collisionPattern)
+    const collisionReports = logItems.map(item => item.message)
+
+    writeDataToFile(collisionReports, fname)
+}
+
 module.exports.fullProfileReportTimes = fullProfileReportTimes;
 module.exports.notificationDelayTimes = notificationDelayTimes;
 module.exports.ingestionRunTimes = ingestionRunTimes
@@ -209,6 +218,7 @@ module.exports.checkerRunTimes = checkerRunTimes
 module.exports.functionRunTimes = functionRunTimes
 module.exports.getAllViolationReports = getAllViolationReports;
 module.exports.getTTLdTableItems = getTTLdTableItems;
+module.exports.getCollisionReport = getCollisionReport;
 
 if (require.main === module) {
     console.log("Running test from main");
